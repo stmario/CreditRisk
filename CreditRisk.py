@@ -4,6 +4,10 @@ import numpy as np
 import csv
 import math
 import random
+from joblib import Parallel, delayed
+import multiprocessing
+from matplotlib import pyplot
+import time
 
 # read in correlation matrix and create per region correlation array
 correlation = pd.read_csv('Correlation.csv')
@@ -48,31 +52,71 @@ with open('Portfolio.csv', "r") as f:
     for i, line in enumerate(reader):
         l = line[0].split(",")
         if(i > 0):
-            portfolio.append(l)
+                portfolio.append(l)
+to_float = lambda x : x[0:3] + [float(x[3])] + [float(x[4])]
+portfolio = list(map(to_float, portfolio))
 
 np.random.seed(42)  # set to fixed value for reproducability of results
-n_sim = 100000  # number of Monte Carlo simulations
+n_sim = 100 # number of Monte Carlo simulations
+#num_cores = multiprocessing.cpu_count()
+#print('num_cores')
+#print(num_cores)
 
-loss_list = []
-total_loss = 0
-for i in range(0,n_sim):
-    print("run monte-carlo iteration " + str(i) + " of " + str(n_sim))
-    samples = np.random.multivariate_normal([0,0,0],cor_matrix) # samples[0]: CH, samples[1]: EU, samples[2]: US
+def mc_sim(samples, eps):
+    total_loss = 0
+    z = {'CH':samples[0], 'EU':samples[1], 'US':samples[2]}
     for loan in portfolio:
-        eps = random.uniform(0,1)
-        X = loanid_to_alpha[loan[0]] * 1.0 + loanid_to_gamma[loan[0]] * eps
-        if (False): # 𝑋􏰎 < 𝑇h𝑟𝑒𝑠h𝑜𝑙𝑑􏰎
+        X = loanid_to_alpha[loan[0]] * z[loan[1]]+ loanid_to_gamma[loan[0]] * eps
+        if X < rating_to_threshold[loan[2]]: # 𝑋􏰎 < 𝑇h𝑟𝑒𝑠h𝑜𝑙𝑑􏰎
             # this credit defaults
             loss = loan[4] * loan[3]
             total_loss += loss
         #else:
         #   no default, nothing to do
-        pass
     # append total loss of this iteration to loss_list
-    loss_list.append(total_loss)
+    return total_loss
+
+
+start = time.time()
+loss_list = []
+for i in range(0,n_sim):
+    total_loss = 0
+    print("run monte-carlo iteration " + str(i) + " of " + str(n_sim))
+    samples = np.random.multivariate_normal([0,0,0],cor_matrix) # samples[0]: CH, samples[1]: EU, samples[2]: US
+    loss_list.append(mc_sim(samples,random.uniform(0,1)))
+end = time.time()
+
+print('Elapsed time:')
+print(end - start)
 
 #Step 3: Assessment of aggregated losses with loss_list
+expected_loss = sum(loss_list)/n_sim
 
+pyplot.plot(sorted(loss_list,reverse=False))
+pyplot.show()
+
+loss_list = sorted(loss_list,reverse=True)
+
+eads = list(map((lambda x: x[3]), portfolio))
+
+perc5 = int(n_sim*0.05)
+perc1 = int(n_sim*0.01)
+var95 = sum(eads) - sum(loss_list[0:perc5])
+var99 = sum(eads) - sum(loss_list[0:perc1])
+
+es95 = sum(loss_list[0:perc5])/(n_sim*0.05)
+es99 = sum(loss_list[0:perc1])/(n_sim*0.01)
+
+print('expected_loss')
+print(expected_loss)
+print('var95')
+print(var95)
+print('var99')
+print(var99)
+print('es95')
+print(es95)
+print('es99')
+print(es99)
 #step 4: ???
 
 #step 5: profit.
