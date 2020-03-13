@@ -57,7 +57,7 @@ to_float = lambda x : x[0:3] + [float(x[3])] + [float(x[4])]
 portfolio = list(map(to_float, portfolio))
 
 np.random.seed(42)  # set to fixed value for reproducability of results
-n_sim = 100 # number of Monte Carlo simulations
+n_sim = 100000 # number of Monte Carlo simulations
 #num_cores = multiprocessing.cpu_count()
 #print('num_cores')
 #print(num_cores)
@@ -81,7 +81,8 @@ start = time.time()
 loss_list = []
 for i in range(0,n_sim):
     total_loss = 0
-    print("run monte-carlo iteration " + str(i) + " of " + str(n_sim))
+    if i % (n_sim / 100) == 0:
+        print("run monte-carlo iteration " + str(i) + " of " + str(n_sim))
     samples = np.random.multivariate_normal([0,0,0],cor_matrix) # samples[0]: CH, samples[1]: EU, samples[2]: US
     loss_list.append(mc_sim(samples,random.uniform(0,1)))
 end = time.time()
@@ -92,7 +93,9 @@ print(end - start)
 #Step 3: Assessment of aggregated losses with loss_list
 expected_loss = sum(loss_list)/n_sim
 
-pyplot.plot(sorted(loss_list,reverse=False))
+fig, axs = pyplot.subplots(1, 2, sharey=True, tight_layout=True)
+axs[0].hist(loss_list, bins=10)
+pyplot.savefig('res')
 pyplot.show()
 
 loss_list = sorted(loss_list,reverse=True)
