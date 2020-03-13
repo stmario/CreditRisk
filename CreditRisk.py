@@ -82,7 +82,7 @@ loss_list = []
 for i in range(0,n_sim):
     total_loss = 0
     if i % (n_sim / 100) == 0:
-        print("run monte-carlo iteration " + str(i) + " of " + str(n_sim))
+        print("run monte-carlo iteration ... " + str(i /(n_sim /100)) + "%")
     samples = np.random.multivariate_normal([0,0,0],cor_matrix) # samples[0]: CH, samples[1]: EU, samples[2]: US
     loss_list.append(mc_sim(samples,random.uniform(0,1)))
 end = time.time()
@@ -93,8 +93,8 @@ print(end - start)
 #Step 3: Assessment of aggregated losses with loss_list
 expected_loss = sum(loss_list)/n_sim
 
-fig, axs = pyplot.subplots(1, 2, sharey=True, tight_layout=True)
-axs[0].hist(loss_list, bins=10)
+fig, axs = pyplot.subplots(1, 1, sharey=True, tight_layout=True)
+axs.hist(loss_list, bins=20)
 pyplot.savefig('res')
 pyplot.show()
 
